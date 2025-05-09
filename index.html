@@ -74,19 +74,15 @@
     </div>
 
     <script>
-        // Supabase bağlantısı
+        // Supabase bağlantısı - BURAYI KENDİ PROJE BİLGİLERİNLE GÜNCELLE
         const supabaseUrl = 'https://djtjlmaagjfsnkoqjoec.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqdGpsbWFhZ2pmc25rb3Fqb2VjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY3ODcwOTIsImV4cCI6MjA2MjM2MzA5Mn0.uzwTPGoISIL_knVKty2ueA1USud785hImmIPcFlEk_w';
         const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // Sekme yönetimi
+        // Tab yönetimi
         function openTab(event, tabId) {
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             event.currentTarget.classList.add('active');
 
@@ -95,10 +91,8 @@
             if (tabId === 'ogrenciler') ogrencileriGetir?.();
         }
 
-        // Okul Ekleme
+        // Okul işlemleri
         async function okulEkle() {
-            console.log("okulEkle çağrıldı"); // debug kontrolü
-
             const okulAdi = document.getElementById('okulAdi').value;
             const adres = document.getElementById('okulAdres').value;
             const telefon = document.getElementById('okulTelefon').value;
@@ -109,7 +103,6 @@
 
             if (error) {
                 alert('Hata: ' + error.message);
-                console.error(error);
             } else {
                 alert('Okul başarıyla eklendi!');
                 okullariGetir();
@@ -117,10 +110,7 @@
         }
 
         async function okullariGetir() {
-            const { data, error } = await supabase
-                .from('okullar')
-                .select('*');
-
+            const { data, error } = await supabase.from('okullar').select('*');
             if (error) {
                 console.error('Hata:', error);
                 return;
@@ -145,10 +135,7 @@
         async function okulSil(id) {
             if (!confirm('Bu okulu silmek istediğinize emin misiniz?')) return;
 
-            const { error } = await supabase
-                .from('okullar')
-                .delete()
-                .eq('id', id);
+            const { error } = await supabase.from('okullar').delete().eq('id', id);
 
             if (error) {
                 alert('Silme hatası: ' + error.message);
@@ -157,7 +144,6 @@
             }
         }
 
-        // Excel yükleme
         async function excelYukle() {
             const fileInput = document.getElementById('excelDosya');
             const tablo = document.getElementById('tabloSec').value;
@@ -190,10 +176,7 @@
                         rows.push(row);
                     }
 
-                    const { data, error } = await supabase
-                        .from(tablo)
-                        .insert(rows);
-
+                    const { error } = await supabase.from(tablo).insert(rows);
                     if (error) throw error;
 
                     durumDiv.innerHTML = `Başarılı! ${rows.length} kayıt eklendi.`;
@@ -211,7 +194,6 @@
             reader.readAsText(file);
         }
 
-        // Sayfa yüklendiğinde okulları getir
         document.addEventListener('DOMContentLoaded', okullariGetir);
     </script>
 </body>
