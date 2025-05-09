@@ -7,127 +7,210 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
-            line-height: 1.6;
+            background-color: #f5f7fa;
         }
-        .card {
-            background: #f4f4f4;
-            padding: 20px;
+        .auth-container, .admin-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin-bottom: 20px;
-            border-radius: 5px;
         }
-        input, button {
-            padding: 8px;
-            margin: 5px 0;
+        .admin-panel { display: none; }
+        input, button, select {
+            padding: 12px;
+            margin: 8px 0;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
         }
         button {
-            background: #333;
+            background-color: #4f46e5;
             color: white;
-            border: none;
+            font-weight: bold;
             cursor: pointer;
+            transition: background-color 0.3s;
         }
+        button:hover { background-color: #4338ca; }
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
         th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
+            padding: 12px;
             text-align: left;
+            border-bottom: 1px solid #ddd;
         }
         th {
-            background-color: #f2f2f2;
+            background-color: #f3f4f6;
+            font-weight: 600;
         }
+        .error { color: #ef4444; margin-top: 10px; }
+        .success { color: #10b981; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <h1>Okul Yönetim Paneli</h1>
-    
-    <div class="card">
-        <h2>Yeni Okul Ekle</h2>
-        <input type="text" id="okulAdi" placeholder="Okul Adı">
-        <input type="text" id="okulAdres" placeholder="Adres">
-        <input type="text" id="okulTelefon" placeholder="Telefon">
-        <button id="kaydetButonu">Kaydet</button>
+    <!-- Giriş Formu -->
+    <div id="auth-container" class="auth-container">
+        <h2>Yönetici Girişi</h2>
+        <input type="email" id="email" placeholder="E-posta">
+        <input type="password" id="password" placeholder="Şifre">
+        <button id="login-btn">Giriş Yap</button>
+        <div id="auth-error" class="error"></div>
     </div>
-    
-    <div class="card">
-        <h2>Okul Listesi</h2>
-        <table id="okulTable">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Okul Adı</th>
-                    <th>Adres</th>
-                    <th>Telefon</th>
-                    <th>İşlemler</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+
+    <!-- Yönetim Paneli -->
+    <div id="admin-panel" class="admin-panel">
+        <h1>Okul Yönetim Paneli <button style="float:right; width:auto;" onclick="logout()">Çıkış Yap</button></h1>
+        
+        <div class="card">
+            <h2>Yeni Okul Ekle</h2>
+            <input type="text" id="okulAdi" placeholder="Okul Adı" required>
+            <input type="text" id="okulAdres" placeholder="Adres">
+            <input type="text" id="okulTelefon" placeholder="Telefon">
+            <button id="kaydetButonu">Kaydet</button>
+            <div id="okul-message" class="error"></div>
+        </div>
+        
+        <div class="card">
+            <h2>Okul Listesi</h2>
+            <table id="okulTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Okul Adı</th>
+                        <th>Adres</th>
+                        <th>Telefon</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </div>
 
     <script>
-        // 1. Supabase bağlantısı
-        const supabaseUrl = 'https://djtjlmaagjfsnkoqjoec.supabase.co'; // https://xxxxx.supabase.co
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqdGpsbWFhZ2pmc25rb3Fqb2VjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY3ODcwOTIsImV4cCI6MjA2MjM2MzA5Mn0.uzwTPGoISIL_knVKty2ueA1USud785hImmIPcFlEk_w'; // uzun anahtar dizesi
+        // Supabase bağlantısı
+        const supabaseUrl = 'https://djtjlmaagjfsnkoqjoec.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqdGpsbWFhZ2pmc25rb3Fqb2VjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY3ODcwOTIsImV4cCI6MjA2MjM2MzA5Mn0.uzwTPGoISIL_knVKty2ueA1USud785hImmIPcFlEk_w';
         const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-        
-        // 2. Sayfa yüklendiğinde çalışacak fonksiyonlar
-        document.addEventListener('DOMContentLoaded', function() {
-            // Okul listesini yükle
-            okullariGetir();
+
+        // Kullanıcı oturumunu kontrol et
+        async function checkSession() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                document.getElementById('auth-container').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                okullariGetir();
+            }
+        }
+
+        // Giriş yap
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorElement = document.getElementById('auth-error');
             
-            // Kaydet butonuna event listener ekle
-            document.getElementById('kaydetButonu').addEventListener('click', okulEkle);
-        });
-        
-        // 3. Okul ekleme fonksiyonu
+            errorElement.textContent = '';
+            
+            if (!email || !password) {
+                errorElement.textContent = 'Lütfen e-posta ve şifre giriniz';
+                return;
+            }
+
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (error) {
+                errorElement.textContent = 'Giriş başarısız: ' + error.message;
+            } else {
+                document.getElementById('auth-container').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                okullariGetir();
+            }
+        }
+
+        // Çıkış yap
+        async function logout() {
+            await supabase.auth.signOut();
+            document.getElementById('auth-container').style.display = 'block';
+            document.getElementById('admin-panel').style.display = 'none';
+        }
+
+        // Okul ekleme fonksiyonu (RLS uyumlu)
         async function okulEkle() {
             const okulAdi = document.getElementById('okulAdi').value;
             const adres = document.getElementById('okulAdres').value;
             const telefon = document.getElementById('okulTelefon').value;
+            const messageElement = document.getElementById('okul-message');
+            
+            messageElement.textContent = '';
             
             if (!okulAdi) {
-                alert('Okul adı boş olamaz!');
+                messageElement.textContent = 'Okul adı boş olamaz!';
+                messageElement.className = 'error';
                 return;
             }
-            
+
             try {
+                // Mevcut kullanıcıyı al
+                const { data: { user } } = await supabase.auth.getUser();
+                
+                if (!user) {
+                    throw new Error('Oturum açık değil');
+                }
+
                 const { data, error } = await supabase
                     .from('okullar')
                     .insert([{ 
                         okul_adi: okulAdi, 
                         adres: adres, 
-                        telefon: telefon 
-                    }]);
-                
+                        telefon: telefon,
+                        created_by: user.id 
+                    }])
+                    .select(); // Insert sonrası veriyi döndürür
+
                 if (error) throw error;
                 
-                alert('Okul başarıyla eklendi!');
+                messageElement.textContent = 'Okul başarıyla eklendi!';
+                messageElement.className = 'success';
+                
                 document.getElementById('okulAdi').value = '';
                 document.getElementById('okulAdres').value = '';
                 document.getElementById('okulTelefon').value = '';
                 
-                okullariGetir(); // Listeyi yenile
+                okullariGetir();
             } catch (err) {
                 console.error('Hata:', err);
-                alert('Okul eklenirken hata oluştu: ' + err.message);
+                messageElement.textContent = 'Hata: ' + err.message;
+                messageElement.className = 'error';
             }
         }
-        
-        // 4. Okul listesini getirme fonksiyonu
+
+        // Okul listesini getir
         async function okullariGetir() {
             try {
+                const { data: { user } } = await supabase.auth.getUser();
+                
+                if (!user) {
+                    throw new Error('Oturum açık değil');
+                }
+
+                // Sadece kullanıcının eklediği okulları getir
                 const { data, error } = await supabase
                     .from('okullar')
                     .select('*')
+                    .eq('created_by', user.id)
                     .order('okul_adi', { ascending: true });
-                
+
                 if (error) throw error;
                 
                 const tbody = document.querySelector('#okulTable tbody');
@@ -150,8 +233,8 @@
                 console.error('Hata:', err);
             }
         }
-        
-        // 5. Okul silme fonksiyonu
+
+        // Okul sil
         async function okulSil(id) {
             if (!confirm('Bu okulu silmek istediğinize emin misiniz?')) return;
             
@@ -164,12 +247,30 @@
                 if (error) throw error;
                 
                 alert('Okul başarıyla silindi!');
-                okullariGetir(); // Listeyi yenile
+                okullariGetir();
             } catch (err) {
                 console.error('Hata:', err);
-                alert('Okul silinirken hata oluştu: ' + err.message);
+                alert('Silme işlemi başarısız: ' + err.message);
             }
         }
+
+        // Event listener'lar
+        document.addEventListener('DOMContentLoaded', function() {
+            checkSession();
+            document.getElementById('login-btn').addEventListener('click', login);
+            document.getElementById('kaydetButonu').addEventListener('click', okulEkle);
+            
+            // Enter tuşu ile giriş
+            document.getElementById('password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    login();
+                }
+            });
+        });
+
+        // Global fonksiyonlar
+        window.logout = logout;
+        window.okulSil = okulSil;
     </script>
 </body>
 </html>
