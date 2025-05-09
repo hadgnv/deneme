@@ -23,10 +23,10 @@
     <h1>Okul Veri Yönetim Paneli</h1>
     
     <div class="tab-buttons">
-        <button class="tab-button active" onclick="openTab('okullar')">Okullar</button>
-        <button class="tab-button" onclick="openTab('ogretmenler')">Öğretmenler</button>
-        <button class="tab-button" onclick="openTab('ogrenciler')">Öğrenciler</button>
-        <button class="tab-button" onclick="openTab('excel')">Excel Yükle</button>
+        <button class="tab-button active" onclick="openTab(event, 'okullar')">Okullar</button>
+        <button class="tab-button" onclick="openTab(event, 'ogretmenler')">Öğretmenler</button>
+        <button class="tab-button" onclick="openTab(event, 'ogrenciler')">Öğrenciler</button>
+        <button class="tab-button" onclick="openTab(event, 'excel')">Excel Yükle</button>
     </div>
     
     <div id="okullar" class="tab active">
@@ -78,9 +78,9 @@
         const supabaseUrl = 'https://djtjlmaagjfsnkoqjoec.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqdGpsbWFhZ2pmc25rb3Fqb2VjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY3ODcwOTIsImV4cCI6MjA2MjM2MzA5Mn0.uzwTPGoISIL_knVKty2ueA1USud785hImmIPcFlEk_w';
         const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-        
-        // Tab yönetimi
-        function openTab(tabId) {
+
+        // Sekme yönetimi
+        function openTab(event, tabId) {
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
@@ -89,45 +89,46 @@
             });
             document.getElementById(tabId).classList.add('active');
             event.currentTarget.classList.add('active');
-            
-            // Tab açıldığında verileri yenile
-            if(tabId === 'okullar') okullariGetir();
-            if(tabId === 'ogretmenler') ogretmenleriGetir();
-            if(tabId === 'ogrenciler') ogrencileriGetir();
+
+            if (tabId === 'okullar') okullariGetir();
+            if (tabId === 'ogretmenler') ogretmenleriGetir?.();
+            if (tabId === 'ogrenciler') ogrencileriGetir?.();
         }
-        
-        // Okul işlemleri
+
+        // Okul Ekleme
         async function okulEkle() {
-            console.log("okulEkle çağrıldı");
+            console.log("okulEkle çağrıldı"); // debug kontrolü
+
             const okulAdi = document.getElementById('okulAdi').value;
             const adres = document.getElementById('okulAdres').value;
             const telefon = document.getElementById('okulTelefon').value;
-            
+
             const { data, error } = await supabase
                 .from('okullar')
                 .insert([{ okul_adi: okulAdi, adres: adres, telefon: telefon }]);
-            
-            if(error) {
+
+            if (error) {
                 alert('Hata: ' + error.message);
+                console.error(error);
             } else {
                 alert('Okul başarıyla eklendi!');
                 okullariGetir();
             }
         }
-        
+
         async function okullariGetir() {
             const { data, error } = await supabase
                 .from('okullar')
                 .select('*');
-            
-            if(error) {
+
+            if (error) {
                 console.error('Hata:', error);
                 return;
             }
-            
+
             const tbody = document.querySelector('#okulListesi tbody');
             tbody.innerHTML = '';
-            
+
             data.forEach(okul => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -135,55 +136,52 @@
                     <td>${okul.okul_adi}</td>
                     <td>${okul.adres || ''}</td>
                     <td>${okul.telefon || ''}</td>
-                    <td>
-                        <button onclick="okulSil('${okul.id}')">Sil</button>
-                    </td>
+                    <td><button onclick="okulSil('${okul.id}')">Sil</button></td>
                 `;
                 tbody.appendChild(tr);
             });
         }
-        
+
         async function okulSil(id) {
-            if(!confirm('Bu okulu silmek istediğinize emin misiniz?')) return;
-            
+            if (!confirm('Bu okulu silmek istediğinize emin misiniz?')) return;
+
             const { error } = await supabase
                 .from('okullar')
                 .delete()
                 .eq('id', id);
-            
-            if(error) {
+
+            if (error) {
                 alert('Silme hatası: ' + error.message);
             } else {
                 okullariGetir();
             }
         }
-        
+
         // Excel yükleme
         async function excelYukle() {
             const fileInput = document.getElementById('excelDosya');
             const tablo = document.getElementById('tabloSec').value;
-            
-            if(!fileInput.files.length) {
+
+            if (!fileInput.files.length) {
                 alert('Lütfen bir dosya seçin!');
                 return;
             }
-            
+
             const file = fileInput.files[0];
             const reader = new FileReader();
-            
-            reader.onload = async function(e) {
+
+            reader.onload = async function (e) {
                 const durumDiv = document.getElementById('yuklemeDurumu');
                 durumDiv.innerHTML = 'Veriler işleniyor...';
-                
+
                 try {
-                    // CSV işleme (basit versiyon)
                     const csvData = e.target.result;
                     const lines = csvData.split('\n');
                     const headers = lines[0].split(',').map(h => h.trim());
                     const rows = [];
-                    
-                    for(let i = 1; i < lines.length; i++) {
-                        if(!lines[i].trim()) continue;
+
+                    for (let i = 1; i < lines.length; i++) {
+                        if (!lines[i].trim()) continue;
                         const values = lines[i].split(',');
                         const row = {};
                         headers.forEach((header, j) => {
@@ -191,30 +189,28 @@
                         });
                         rows.push(row);
                     }
-                    
-                    // Supabase'e yükle
+
                     const { data, error } = await supabase
                         .from(tablo)
                         .insert(rows);
-                    
-                    if(error) throw error;
-                    
+
+                    if (error) throw error;
+
                     durumDiv.innerHTML = `Başarılı! ${rows.length} kayıt eklendi.`;
                     fileInput.value = '';
-                    
-                    // İlgili tablodaki verileri yenile
-                    if(tablo === 'okullar') okullariGetir();
-                    if(tablo === 'ogretmenler') ogretmenleriGetir();
-                    if(tablo === 'ogrenciler') ogrencileriGetir();
-                    
+
+                    if (tablo === 'okullar') okullariGetir();
+                    if (tablo === 'ogretmenler') ogretmenleriGetir?.();
+                    if (tablo === 'ogrenciler') ogrencileriGetir?.();
+
                 } catch (error) {
                     durumDiv.innerHTML = `Hata: ${error.message}`;
                 }
             };
-            
+
             reader.readAsText(file);
         }
-        
+
         // Sayfa yüklendiğinde okulları getir
         document.addEventListener('DOMContentLoaded', okullariGetir);
     </script>
