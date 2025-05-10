@@ -6,105 +6,53 @@
     <title>Okul Yönetim Paneli</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        #login-form {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        #admin-panel {
-            display: none;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        input, button {
-            padding: 10px;
-            margin: 8px 0;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        .error {
-            color: red;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        #login-form, #admin-panel { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        #admin-panel { display: none; }
+        input, button { padding: 10px; margin: 8px 0; width: 100%; box-sizing: border-box; }
+        button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+        .error { color: red; }
     </style>
 </head>
 <body>
-    <!-- 1. ADIM: Giriş Formu -->
     <div id="login-form">
         <h2>Yönetici Girişi</h2>
         <input type="email" id="admin-email" placeholder="admin@okul.com">
         <input type="password" id="admin-password" placeholder="Şifre">
-        <button onclick="adminLogin()">Giriş Yap</button>
+        <button id="login-btn">Giriş Yap</button>
         <p id="login-error" class="error"></p>
     </div>
 
-    <!-- 2. ADIM: Yönetim Paneli -->
     <div id="admin-panel">
-        <h2>Okul Yönetim Paneli <button onclick="logout()" style="float:right; background:#f44336;">Çıkış Yap</button></h2>
-        
-        <!-- Okul Ekleme Formu -->
-        <div>
-            <h3>Yeni Okul Ekle</h3>
-            <input type="text" id="okul-adi" placeholder="Okul Adı">
-            <button onclick="okulEkle()">Kaydet</button>
-            <p id="okul-message" class="error"></p>
-        </div>
-        
-        <!-- Okul Listesi -->
-        <div>
-            <h3>Okul Listesi</h3>
-            <table id="okul-listesi">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Okul Adı</th>
-                        <th>İşlem</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
+        <h2>Yönetim Paneli <button onclick="logout()" style="background:#f44336;">Çıkış Yap</button></h2>
+        <!-- Panel içeriği buraya -->
     </div>
 
     <script>
-        // Supabase bağlantısı (KENDİ BİLGİLERİNİZİ YAZIN)
+        // 1. ÖNCE Supabase bağlantısını GLOBAL olarak tanımla
         const supabaseUrl = 'https://djtjlmaagjfsnkoqjoec.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqdGpsbWFhZ2pmc25rb3Fqb2VjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY3ODcwOTIsImV4cCI6MjA2MjM2MzA5Mn0.uzwTPGoISIL_knVKty2ueA1USud785hImmIPcFlEk_w';
         const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // 3. ADIM: Giriş Fonksiyonu
+        // 2. Sayfa yüklendiğinde çalışacak fonksiyon
+        document.addEventListener('DOMContentLoaded', function() {
+            // Buton event listener'ları
+            document.getElementById('login-btn').addEventListener('click', adminLogin);
+            
+            // Oturum kontrolü
+            checkSession();
+        });
+
+        // 3. Oturum kontrol fonksiyonu
+        async function checkSession() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+            }
+        }
+
+        // 4. Giriş fonksiyonu
         async function adminLogin() {
             const email = document.getElementById('admin-email').value;
             const password = document.getElementById('admin-password').value;
@@ -122,105 +70,15 @@
             } else {
                 document.getElementById('login-form').style.display = 'none';
                 document.getElementById('admin-panel').style.display = 'block';
-                okullariGetir();
             }
         }
 
-        // 4. ADIM: Okul Ekleme Fonksiyonu
-        async function okulEkle() {
-            const okulAdi = document.getElementById('okul-adi').value;
-            const messageElement = document.getElementById('okul-message');
-            
-            if (!okulAdi) {
-                messageElement.textContent = 'Okul adı boş olamaz!';
-                return;
-            }
-
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                
-                const { data, error } = await supabase
-                    .from('okullar')
-                    .insert([{ 
-                        okul_adi: okulAdi,
-                        created_by: user.id 
-                    }]);
-
-                if (error) throw error;
-                
-                messageElement.textContent = 'Okul başarıyla eklendi!';
-                messageElement.style.color = 'green';
-                document.getElementById('okul-adi').value = '';
-                
-                okullariGetir();
-            } catch (err) {
-                messageElement.textContent = 'Hata: ' + err.message;
-            }
-        }
-
-        // Okulları Listeleme Fonksiyonu
-        async function okullariGetir() {
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                
-                const { data, error } = await supabase
-                    .from('okullar')
-                    .select('*')
-                    .eq('created_by', user.id);
-
-                if (error) throw error;
-                
-                const tbody = document.querySelector('#okul-listesi tbody');
-                tbody.innerHTML = '';
-                
-                data.forEach(okul => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${okul.id.substring(0, 5)}...</td>
-                        <td>${okul.okul_adi}</td>
-                        <td><button onclick="okulSil('${okul.id}')" style="padding:5px; background:#f44336;">Sil</button></td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            } catch (err) {
-                console.error('Hata:', err);
-            }
-        }
-
-        // 5. ADIM: Çıkış Fonksiyonu
-        async function logout() {
+        // 5. Çıkış fonksiyonu (global olarak tanımla)
+        window.logout = async function() {
             await supabase.auth.signOut();
             document.getElementById('login-form').style.display = 'block';
             document.getElementById('admin-panel').style.display = 'none';
         }
-
-        // Okul Silme Fonksiyonu
-        async function okulSil(id) {
-            if (!confirm('Bu okulu silmek istediğinize emin misiniz?')) return;
-            
-            try {
-                const { error } = await supabase
-                    .from('okullar')
-                    .delete()
-                    .eq('id', id);
-                
-                if (error) throw error;
-                
-                okullariGetir();
-            } catch (err) {
-                alert('Silme işlemi başarısız: ' + err.message);
-            }
-        }
-
-        // Sayfa yüklendiğinde oturum kontrolü
-        document.addEventListener('DOMContentLoaded', async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                document.getElementById('login-form').style.display = 'none';
-                document.getElementById('admin-panel').style.display = 'block';
-                okullariGetir();
-            }
-        });
     </script>
 </body>
 </html>
