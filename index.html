@@ -3,232 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Okul Yönetim Paneli</title>
+    <title>Anaokulu Yönetim Paneli</title>
     <link rel="icon" href="data:,">
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f4f4; }
-        #login-form, #admin-panel { background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        #login-form, #admin-panel { 
+            background: #fff; 
+            padding: 25px; 
+            border-radius: 12px; 
+            margin-bottom: 25px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
         #admin-panel { display: none; }
-        input, button { padding: 12px; margin: 8px 0; width: 100%; box-sizing: border-box; font-size: 16px; border: 1px solid #ddd; border-radius: 4px; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        .error { color: #dc3545; margin-top: 5px; }
-        h2, h3 { color: #333; }
-    </style>
-</head>
-<body>
-    <div id="login-form">
-        <h2>Yönetici Girişi</h2>
-        <input type="email" id="admin-email" placeholder="E-posta" required>
-        <input type="password" id="admin-password" placeholder="Şifre" required>
-        <button id="login-btn">Giriş Yap</button>
-        <p id="login-error" class="error"></p>
-    </div>
-
-    <div id="admin-panel">
-        <h2>Yönetim Paneli <button id="logout-btn" style="background:#dc3545;">Çıkış Yap</button></h2>
-        <div>
-            <h3>Okul Ekle</h3>
-            <input type="text" id="okul-adi" placeholder="Okul Adı">
-            <button id="save-btn">Kaydet</button>
-            <p id="okul-message" class="error"></p>
-        </div>
-    </div>
-
-    <script>
-        // Firebase yapılandırması - KENDİ Firebase yapılandırma bilgilerinizle değiştirin!
-        const firebaseConfig = {
-          apiKey: "AIzaSyBmgx4VTJ0vp-TF3JBPKP2r3liCD7eKL4E",
-          authDomain: "deneme-cc0cd.firebaseapp.com",
-          projectId: "deneme-cc0cd",
-          storageBucket: "deneme-cc0cd.firebasestorage.app",
-          messagingSenderId: "417909054103",
-          appId: "1:417909054103:web:3bd0537ab037a226e8a7d2",
-          measurementId: "G-W94KYTEYVS"
-        };
-
-        // Firebase uygulamasını başlat
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const loginBtn = document.getElementById('login-btn');
-            const logoutBtn = document.getElementById('logout-btn');
-            const saveBtn = document.getElementById('save-btn');
-
-            if(loginBtn) loginBtn.addEventListener('click', adminLogin);
-            if(logoutBtn) logoutBtn.addEventListener('click', logout);
-            if(saveBtn) saveBtn.addEventListener('click', okulEkle);
-
-            checkAuth();
-        });
-
-        function checkAuth() {
-            auth.onAuthStateChanged(user => {
-                if (user) {
-                    document.getElementById('login-form').style.display = 'none';
-                    document.getElementById('admin-panel').style.display = 'block';
-                } else {
-                    document.getElementById('login-form').style.display = 'block';
-                    document.getElementById('admin-panel').style.display = 'none';
-                }
-            });
+        .section {
+            background: #f9f9f9;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 10px;
+            border-left: 4px solid #4CAF50;
         }
-
-        async function adminLogin() {
-            const email = document.getElementById('admin-email').value;
-            const password = document.getElementById('admin-password').value;
-            const errorElement = document.getElementById('login-error');
-            errorElement.textContent = '';
-
-            try {
-                await auth.signInWithEmailAndPassword(email, password);
-            } catch (error) {
-                errorElement.textContent = 'Giriş başarısız: ' + error.message;
-                console.error('Giriş hatası:', error);
-            }
+        input, button, select, textarea {
+            padding: 12px 15px;
+            margin: 10px 0;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
         }
-
-        async function logout() {
-            try {
-                await auth.signOut();
-            } catch (error) {
-                console.error('Çıkış hatası:', error);
-            }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
         }
-
-        async function okulEkle() {
-            const okulAdi = document.getElementById('okul-adi').value;
-            const messageElement = document.getElementById('okul-message');
-            messageElement.textContent = '';
-
-            if (!okulAdi || okulAdi.trim() === '') {
-                messageElement.textContent = 'Okul adı boş olamaz!';
-                return;
-            }
-
-            try {
-                const user = auth.currentUser;
-                if (user) {
-                    await db.collection('okullar').add({
-                        okul_adi: okulAdi,
-                        olusturan_kullanici: user.uid,
-                        olusturma_tarihi: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    messageElement.textContent = 'Okul başarıyla eklendi!';
-                    messageElement.style.color = 'green';
-                    document.getElementById('okul-adi').value = '';
-                }
-            } catch (error) {
-                messageElement.textContent = 'Hata: ' + error.message;
-                console.error('Okul ekleme hatası:', error);
-            }
-        }
-    </script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Okul Yönetim Paneli</title>
-    <!-- Favicon hatasını önlemek için -->
-    <link rel="icon" href="data:,">
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        #login-form, #admin-panel { background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        #admin-panel { display: none; }
-        input, button { padding: 12px; margin: 8px 0; width: 100%; box-sizing: border-box; font-size: 16px; }
-        button { background: #4CAF50; color: white; border: none; cursor: pointer; }
         button:hover { background: #45a049; }
+        .delete-btn {
+            background: #ff4444;
+            padding: 5px 12px;
+            font-size: 14px;
+        }
         .error { color: #f44336; margin-top: 5px; }
-        .success { color: #4CAF50; margin-top: 5px; }
-        #schools-container { list-style-type: none; padding: 0; }
-        #schools-container li { padding: 10px; background: #f9f9f9; margin-bottom: 5px; border-radius: 4px; }
+        .success { color: #4CAF50; }
+        #school-list {
+            margin-top: 15px;
+        }
+        .school-item {
+            padding: 12px;
+            background: white;
+            margin: 8px 0;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        textarea {
+            min-height: 120px;
+            font-family: monospace;
+        }
+        h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h3 { color: #444; margin-top: 0; }
     </style>
 </head>
 <body>
+    <!-- Giriş Formu -->
     <div id="login-form">
-        <h2>Yönetici Girişi</h2>
+        <h2>🔐 Yönetici Girişi</h2>
         <input type="email" id="admin-email" placeholder="admin@okul.com" required>
         <input type="password" id="admin-password" placeholder="Şifre" required>
         <button id="login-btn">Giriş Yap</button>
         <p id="login-error" class="error"></p>
     </div>
 
+    <!-- Yönetim Paneli -->
     <div id="admin-panel">
-        <h2>Yönetim Paneli <button id="logout-btn" style="background:#f44336; width: auto; float: right;">Çıkış Yap</button></h2>
-        <div style="clear: both;"></div>
+        <h2>
+            🏫 Anaokulu Yönetim Paneli
+            <button id="logout-btn" style="background:#f44336; float:right;">Çıkış Yap</button>
+        </h2>
         
-        <div>
-            <h3>Okul Ekle</h3>
+        <!-- Okul Yönetimi -->
+        <div class="section">
+            <h3>✔️ Okul İşlemleri</h3>
             <input type="text" id="okul-adi" placeholder="Okul Adı">
-            <button id="save-btn">Kaydet</button>
-            <p id="okul-message" class="error"></p>
+            <button id="save-school-btn">Okul Ekle</button>
+            <div id="school-list"></div>
+            <p id="school-message" class="error"></p>
         </div>
-        
-        <div id="schools-list">
-            <h3>Kayıtlı Okullar</h3>
-            <ul id="schools-container"></ul>
+
+        <!-- Öğretmen Yönetimi -->
+        <div class="section">
+            <h3>👩‍🏫 Öğretmen Ekle</h3>
+            <select id="teacher-school-select" class="select-box">
+                <option value="">Okul Seçin</option>
+            </select>
+            <input type="text" id="teacher-name" placeholder="Ad Soyad">
+            <input type="email" id="teacher-email" placeholder="Email">
+            <input type="password" id="teacher-password" placeholder="Şifre">
+            <button id="add-teacher-btn">Öğretmen Kaydet</button>
+            <p id="teacher-message" class="error"></p>
+        </div>
+
+        <!-- Veli Toplu Kayıt -->
+        <div class="section">
+            <h3>👨‍👩‍👧 Toplu Veli Ekleme (CSV Format)</h3>
+            <textarea id="parents-csv" placeholder="Telefon,Öğrenci Adı (Her satıra bir veli)&#10;5551234567,Ali Demir&#10;5557654321,Ayşe Yılmaz"></textarea>
+            <button id="import-parents-btn">Veli Verilerini İçe Aktar</button>
+            <p id="import-message" class="error"></p>
         </div>
     </div>
 
     <script>
-        // Firebase konfigürasyon bilgileriniz - BUNLARI KENDİ FIREBASE PROJENİZDEN ALMALISINIZ
-        const firebaseConfig = {
-            apiKey: "AIzaSyBmgx4VTJ0vp-TF3JBPKP2r3liCD7eKL4E",
-            authDomain: "deneme-cc0cd.firebaseapp.com",
-            projectId: "deneme-cc0cd",
-            storageBucket: "deneme-cc0cd.firebasestorage.app",
-            messagingSenderId: "417909054103",
-            appId: "1:417909054103:web:3bd0537ab037a226e8a7d2"
-        };
+        // Supabase Bağlantısı
+        const supabaseUrl = 'https://acxuqohmboqaxmoekmls.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjeHVxb2htYm9xYXhtb2VrbWxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY5NDM1NDAsImV4cCI6MjA2MjUxOTU0MH0.pYWtmQM-nXQwVTiTmL2qCW1wLc3LvnUQxOxiFgUY-D8';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // Firebase'i başlat
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-
-        // DOM tam yüklendikten sonra çalışacak fonksiyon
+        // DOM Yüklendiğinde
         document.addEventListener('DOMContentLoaded', () => {
-            // Elementleri seç
+            // Elementler
             const loginBtn = document.getElementById('login-btn');
             const logoutBtn = document.getElementById('logout-btn');
-            const saveBtn = document.getElementById('save-btn');
-            
-            // Event listener'ları ekle
+            const saveSchoolBtn = document.getElementById('save-school-btn');
+            const addTeacherBtn = document.getElementById('add-teacher-btn');
+            const importParentsBtn = document.getElementById('import-parents-btn');
+
+            // Event Listeners
             if(loginBtn) loginBtn.addEventListener('click', adminLogin);
             if(logoutBtn) logoutBtn.addEventListener('click', logout);
-            if(saveBtn) saveBtn.addEventListener('click', okulEkle);
-            
-            // Oturum kontrolü yap
+            if(saveSchoolBtn) saveSchoolBtn.addEventListener('click', okulEkle);
+            if(addTeacherBtn) addTeacherBtn.addEventListener('click', addTeacher);
+            if(importParentsBtn) importParentsBtn.addEventListener('click', importParents);
+
+            // Oturum Kontrolü
             checkSession();
         });
 
-        // Oturum kontrol fonksiyonu
-        function checkSession() {
-            auth.onAuthStateChanged((user) => {
+        // 1. Oturum Kontrolü
+        async function checkSession() {
+            try {
+                const { data: { user }, error } = await supabase.auth.getUser();
                 if (user) {
-                    document.getElementById('login-form').style.display = 'none';
-                    document.getElementById('admin-panel').style.display = 'block';
-                    loadSchools(); // Okulları yükle
-                } else {
-                    document.getElementById('login-form').style.display = 'block';
-                    document.getElementById('admin-panel').style.display = 'none';
+                    showAdminPanel();
+                    loadSchools();
                 }
-            });
+            } catch (err) {
+                console.error('Oturum kontrol hatası:', err);
+            }
         }
 
-        // Giriş fonksiyonu
+        // 2. Giriş Fonksiyonu
         async function adminLogin() {
             const email = document.getElementById('admin-email').value;
             const password = document.getElementById('admin-password').value;
@@ -237,29 +171,40 @@
             errorElement.textContent = '';
             
             try {
-                await auth.signInWithEmailAndPassword(email, password);
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+                
+                showAdminPanel();
+                loadSchools();
             } catch (err) {
                 errorElement.textContent = 'Giriş başarısız: ' + err.message;
-                console.error('Giriş hatası:', err);
             }
         }
 
-        // Çıkış fonksiyonu
+        // 3. Yönetici Paneli Göster
+        function showAdminPanel() {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('admin-panel').style.display = 'block';
+        }
+
+        // 4. Çıkış Fonksiyonu
         async function logout() {
             try {
-                await auth.signOut();
+                await supabase.auth.signOut();
+                document.getElementById('login-form').style.display = 'block';
+                document.getElementById('admin-panel').style.display = 'none';
+                document.getElementById('admin-password').value = '';
             } catch (err) {
                 console.error('Çıkış hatası:', err);
             }
         }
 
-        // Okul ekleme fonksiyonu
+        // 5. Okul İşlemleri
         async function okulEkle() {
-            const okulAdi = document.getElementById('okul-adi').value.trim();
-            const messageElement = document.getElementById('okul-message');
+            const okulAdi = document.getElementById('okul-adi').value;
+            const messageElement = document.getElementById('school-message');
             
             messageElement.textContent = '';
-            messageElement.className = 'error';
             
             if (!okulAdi) {
                 messageElement.textContent = 'Okul adı boş olamaz!';
@@ -267,20 +212,20 @@
             }
 
             try {
-                const user = auth.currentUser;
-                if (!user) throw new Error('Kullanıcı giriş yapmamış');
+                const { data: { user } } = await supabase.auth.getUser();
                 
-                await db.collection('schools').add({
-                    name: okulAdi,
-                    createdBy: user.uid,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                const { data, error } = await supabase
+                    .from('okullar')
+                    .insert([{ 
+                        okul_adi: okulAdi,
+                        created_by: user.id 
+                    }]);
+
+                if (error) throw error;
                 
-                messageElement.textContent = 'Okul başarıyla eklendi!';
+                messageElement.textContent = '✔️ Okul başarıyla eklendi!';
                 messageElement.className = 'success';
                 document.getElementById('okul-adi').value = '';
-                
-                // Okul listesini yenile
                 loadSchools();
             } catch (err) {
                 messageElement.textContent = 'Hata: ' + err.message;
@@ -288,20 +233,164 @@
             }
         }
 
-        // Okulları yükleme fonksiyonu
+        // 6. Okulları Listele
         async function loadSchools() {
-            const schoolsContainer = document.getElementById('schools-container');
-            schoolsContainer.innerHTML = '<li>Yükleniyor...</li>';
+            try {
+                const { data: schools, error } = await supabase
+                    .from('okullar')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const listElement = document.getElementById('school-list');
+                listElement.innerHTML = schools.map(school => `
+                    <div class="school-item">
+                        <span>${school.okul_adi}</span>
+                        <button onclick="deleteSchool(${school.id})" class="delete-btn">Sil</button>
+                    </div>
+                `).join('');
+
+                // Öğretmen ekleme dropdown'ını doldur
+                const schoolSelect = document.getElementById('teacher-school-select');
+                schoolSelect.innerHTML = '<option value="">Okul Seçin</option>' + 
+                    schools.map(school => 
+                        `<option value="${school.id}">${school.okul_adi}</option>`
+                    ).join('');
+            } catch (err) {
+                console.error('Okul listeleme hatası:', err);
+            }
+        }
+
+        // 7. Okul Silme
+        async function deleteSchool(schoolId) {
+            if (!confirm("Okulu ve bağlı tüm verileri silmek istediğinize emin misiniz?")) return;
             
             try {
-                const snapshot = await db.collection('schools').orderBy('createdAt', 'desc').get();
+                const { error } = await supabase
+                    .from('okullar')
+                    .delete()
+                    .eq('id', schoolId);
+
+                if (error) throw error;
                 
-                if (snapshot.empty) {
-                    schoolsContainer.innerHTML = '<li>Henüz okul eklenmemiş</li>';
-                    return;
+                loadSchools();
+                document.getElementById('school-message').textContent = 'Okul silindi!';
+            } catch (err) {
+                console.error('Okul silme hatası:', err);
+                alert('Okul silinirken hata oluştu!');
+            }
+        }
+
+        // 8. Öğretmen Ekleme
+        async function addTeacher() {
+            const schoolId = document.getElementById('teacher-school-select').value;
+            const name = document.getElementById('teacher-name').value;
+            const email = document.getElementById('teacher-email').value;
+            const password = document.getElementById('teacher-password').value;
+            const messageElement = document.getElementById('teacher-message');
+            
+            messageElement.textContent = '';
+            
+            if (!schoolId || !name || !email || !password) {
+                messageElement.textContent = 'Tüm alanlar zorunludur!';
+                return;
+            }
+
+            try {
+                // 1. Auth kaydı
+                const { data: authData, error: authError } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { 
+                        data: { 
+                            role: 'teacher',
+                            school_id: schoolId
+                        } 
+                    }
+                });
+
+                if (authError) throw authError;
+
+                // 2. Teachers tablosuna ekle
+                if (authData.user) {
+                    const { error } = await supabase
+                        .from('teachers')
+                        .insert([{ 
+                            school_id: schoolId,
+                            name,
+                            email,
+                            auth_id: authData.user.id 
+                        }]);
+
+                    if (error) throw error;
+                    
+                    messageElement.textContent = '✔️ Öğretmen başarıyla eklendi!';
+                    messageElement.className = 'success';
+                    
+                    // Formu temizle
+                    document.getElementById('teacher-name').value = '';
+                    document.getElementById('teacher-email').value = '';
+                    document.getElementById('teacher-password').value = '';
                 }
+            } catch (err) {
+                messageElement.textContent = 'Hata: ' + err.message;
+                console.error('Öğretmen ekleme hatası:', err);
+            }
+        }
+
+        // 9. Toplu Veli Ekleme
+        async function importParents() {
+            const csv = document.getElementById('parents-csv').value.trim();
+            const messageElement = document.getElementById('import-message');
+            messageElement.textContent = '';
+            
+            if (!csv) {
+                messageElement.textContent = 'CSV verisi boş olamaz!';
+                return;
+            }
+
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
                 
-                schoolsContainer.innerHTML = '';
-                snapshot.forEach(doc => {
-                    const school = doc.data();
-                   
+                // Geçerli yöneticinin okulunu al
+                const { data: schoolData, error: schoolError } = await supabase
+                    .from('okullar')
+                    .select('id')
+                    .eq('created_by', user.id)
+                    .single();
+
+                if (schoolError || !schoolData) throw new Error('Okul bilgisi bulunamadı!');
+
+                const parents = csv.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0)
+                    .map(line => {
+                        const [phone, student_name] = line.split(',').map(item => item.trim());
+                        return { 
+                            school_id: schoolData.id, 
+                            phone, 
+                            student_name 
+                        };
+                    });
+
+                const { error } = await supabase
+                    .from('parents')
+                    .insert(parents);
+
+                if (error) throw error;
+                
+                messageElement.textContent = `✔️ ${parents.length} veli başarıyla eklendi!`;
+                messageElement.className = 'success';
+                document.getElementById('parents-csv').value = '';
+            } catch (err) {
+                messageElement.textContent = 'Hata: ' + err.message;
+                console.error('Veli import hatası:', err);
+            }
+        }
+
+        // Silme fonksiyonunu global yap
+        window.deleteSchool = deleteSchool;
+    </script>
+</body>
+</html>
